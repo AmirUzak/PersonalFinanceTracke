@@ -1,90 +1,97 @@
 package com.example.personalfinancetracke;
 
-import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ListView;
 import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import java.util.ArrayList;
+import java.util.List;
 
-import com.google.gson.Gson;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-
-import javax.net.ssl.HttpsURLConnection;
-
-public class MainActivity extends Activity {
-
-    private TextView tvResult;
-    private Button btnLoad;
-
-    private static final String API_URL =
-            "https://dummyjson.com/users/1";
-
-
+public class MainActivity extends AppCompatActivity {
+    private static final int ADD_OPERATION_REQUEST = 1;
+    
+    private DatabaseHelper dbHelper;
+    private TextView balanceTextView;
+    private TextView incomeTextView;
+    private TextView expenseTextView;
+    private ListView operationsListView;
+    private OperationAdapter adapter;
+    private List<Operation> operations;
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_main);
-
-        tvResult = findViewById(R.id.tvResult);
-        btnLoad = findViewById(R.id.btnLoad);
-
-        btnLoad.setOnClickListener(v -> loadDataFromInternet());
-    }
-
-    // 3-қадам: HTTP арқылы дерек жүктеу (фонда)
-    private void loadDataFromInternet() {
-        tvResult.setText("Жүктелуде...");
-
-        new Thread(() -> {
-            try {
-                URL url = new URL(API_URL);
-
-                HttpsURLConnection connection =
-                        (HttpsURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                connection.setConnectTimeout(15000);
-                connection.setReadTimeout(15000);
-
-                int responseCode = connection.getResponseCode();
-                if (responseCode != HttpsURLConnection.HTTP_OK) {
-                    throw new Exception("HTTP Error: " + responseCode);
-                }
-
-                // InputStream оқу -> JSON String жинау
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(connection.getInputStream())
-                );
-
-                StringBuilder builder = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    builder.append(line);
-                }
-                reader.close();
-                connection.disconnect();
-
-                String json = builder.toString();
-
-                // 4-қадам: Gson арқылы десериализация
-                User user = new Gson().fromJson(json, User.class);
-
-                // 5-қадам: UI-де көрсету (негізгі ағында)
-                runOnUiThread(() -> {
-                    String result =
-                            "ID: " + user.getId() + "\n" +
-                                    "Name: " + user.getName() + "\n" +
-                                    "Email: " + user.getEmail() + "\n" +
-                                    "Phone: " + user.getPhone();
-                    tvResult.setText(result);
-                });
-
-            } catch (Exception e) {
-                runOnUiThread(() -> tvResult.setText("Қате: " + e.getMessage()));
+        
+        dbHelper = new DatabaseHelper(this);
+        
+        balanceTextView = findViewById(R.id.balance_text_view);
+        incomeTextView = findViewById(R.id.income_text_view);
+        expenseTextView = findViewById(R.id.expense_text_view);
+        operationsListView = findViewById(R.id.operations_list_view);
+        FloatingActionButton fabAdd = findViewById(R.id.fab_add);
+        
+        operations = new ArrayList<>();
+        adapter = new OperationAdapter(this, operations);
+        operationsListView.setAdapter(adapter);
+        
+        // Long click to delete
+        operationsListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                Operation operation = operations.get(position);
+                dbHelper.deleteOperation(operation.getId());
+                loadOperations();
+                return true;
             }
-        }).start();
+        });
+        
+        fabAdd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, AddOperationActivity.class);
+                startActivityForResult(intent, ADD_OPERATION_REQUEST);
+            }
+        });
+        
+        loadOperations();
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == ADD_OPERATION_REQUEST && resultCode == RESULT_OK) {
+            loadOperations();
+        }
+    }
+    
+    private void loadOperations() {
+        operations.clear();
+        operations.addAll(dbHelper.getAllOperations());
+        adapter.notifyDataSetChanged();
+        updateBalance();
+    }
+    
+    private void updateBalance() {
+        double income = 0;
+        double expense = 0;
+        
+        for (Operation op : operations) {
+            if (op.getType().equals("income")) {
+                income += op.getAmount();
+            } else {
+                expense += op.getAmount();
+            }
+        }
+        
+        double balance = income - expense;
+        
+        balanceTextView.setText(String.format("₸%.2f", balance));
+        incomeTextView.setText(String.format("↑ %.2f", income));
+        expenseTextView.setText(String.format("↓ %.2f", expense));
     }
 }

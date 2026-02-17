@@ -11,4 +11,10 @@
     <string name="category">Category</string>
     <string name="save">Save</string>
     <string name="error_empty_amount">Please enter an amount</string>
+
+    <!-- Статусы для AsyncTask -->
+    <string name="status_ready">Готово</string>
+    <string name="status_loading">Загрузка данных...</string>
+    <string name="status_processing">Обработка...</string>
+    <string name="status_cancelled">Отменено</string>
 </resources>

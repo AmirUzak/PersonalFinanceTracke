@@ -1,8 +1,11 @@
 package com.example.personalfinancetracke;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -15,6 +18,9 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final int ADD_OPERATION_REQUEST = 1;
+    private static final String PREFS_NAME = "FinanceTrackerPrefs";
+    private static final String KEY_USER_NAME = "user_name";
+    private static final String KEY_CURRENCY = "currency";
 
     private DatabaseHelper dbHelper;
     private TextView balanceTextView;
@@ -27,10 +33,21 @@ public class MainActivity extends AppCompatActivity {
     private OperationAdapter adapter;
     private List<Operation> operations;
 
+    private String userName = "";
+    private String currencySymbol = "₸";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Загружаем настройки пользователя
+        loadUserSettings();
+
+        // Устанавливаем заголовок с именем пользователя
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(getString(R.string.welcome_user, userName));
+        }
 
         dbHelper = new DatabaseHelper(this);
 
@@ -43,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
         fabAdd = findViewById(R.id.fab_add);
 
         operations = new ArrayList<>();
-        adapter = new OperationAdapter(this, operations);
+        adapter = new OperationAdapter(this, operations, currencySymbol);
         operationsListView.setAdapter(adapter);
 
         // Long click to delete
@@ -67,6 +84,45 @@ public class MainActivity extends AppCompatActivity {
 
         // Загружаем операции асинхронно
         loadOperations();
+    }
+
+    /**
+     * Загружает настройки пользователя из SharedPreferences
+     */
+    private void loadUserSettings() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        userName = prefs.getString(KEY_USER_NAME, "User");
+        currencySymbol = prefs.getString(KEY_CURRENCY, "₸");
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Добавляем меню для сброса настроек
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_reset_settings) {
+            resetSettings();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * Сбрасывает настройки и возвращает на экран приветств��я
+     */
+    private void resetSettings() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("first_launch", true);
+        editor.apply();
+
+        Intent intent = new Intent(MainActivity.this, WelcomeActivity.class);
+        startActivity(intent);
+        finish();
     }
 
     @Override
@@ -95,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Пересчитывает и обновляет баланс
+     * Пересчитывает и обновляет баланс с выбранной валютой
      */
     private void updateBalance() {
         double income = 0;
@@ -111,77 +167,50 @@ public class MainActivity extends AppCompatActivity {
 
         double balance = income - expense;
 
-        balanceTextView.setText(String.format("₸%.2f", balance));
+        balanceTextView.setText(String.format("%s%.2f", currencySymbol, balance));
         incomeTextView.setText(String.format("↑ %.2f", income));
         expenseTextView.setText(String.format("↓ %.2f", expense));
     }
 
     /**
      * AsyncTask для загрузки операций из SQLite в фоновом потоке
-     *
-     * Params: Void - не принимает параметры
-     * Progress: Integer - прогресс в процентах (0-100)
-     * Result: List<Operation> - результат загрузки
      */
     private class LoadOperationsTask extends AsyncTask<Void, Integer, List<Operation>> {
 
-        /**
-         * Выполняется в UI потоке перед doInBackground()
-         * Подготавливает UI к загрузке
-         */
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-
-            // Показываем ProgressBar
             progressBar.setVisibility(View.VISIBLE);
             progressBar.setProgress(0);
-
-            // Меняем статус
             statusTextView.setText(R.string.status_loading);
-
-            // Отключаем кнопку добавления на время загрузки
             fabAdd.setEnabled(false);
             fabAdd.setAlpha(0.5f);
         }
 
-        /**
-         * Выполняется в фоновом потоке
-         * Загружает операции из БД с имитацией задержки
-         */
         @Override
         protected List<Operation> doInBackground(Void... voids) {
-            // Имитируем загрузку данных с прогрессом
-
-            // Начало загрузки - 10%
             publishProgress(10);
 
             try {
-                Thread.sleep(500); // Имитация задержки
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            // Получение данных из БД - 50%
             publishProgress(50);
             List<Operation> loadedOperations = dbHelper.getAllOperations();
 
             try {
-                Thread.sleep(500); // Имитация обработки
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            // Обработка завершена - 100%
             publishProgress(100);
 
             return loadedOperations;
         }
 
-        /**
-         * Выполняется в UI потоке при вызове publishProgress()
-         * Обновляет прогресс загрузки
-         */
         @Override
         protected void onProgressUpdate(Integer... values) {
             super.onProgressUpdate(values);
@@ -190,7 +219,6 @@ public class MainActivity extends AppCompatActivity {
                 int progress = values[0];
                 progressBar.setProgress(progress);
 
-                // Обновляем статус в зависимости от прогресса
                 if (progress < 50) {
                     statusTextView.setText(R.string.status_loading);
                 } else if (progress < 100) {
@@ -199,42 +227,21 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        /**
-         * Выполняется в UI потоке после doInBackground()
-         * Обновляет UI загруженными данными
-         */
         @Override
         protected void onPostExecute(List<Operation> loadedOperations) {
             super.onPostExecute(loadedOperations);
-
-            // Обновляем UI с загруженными данными
             updateUI(loadedOperations);
-
-            // Скрываем ProgressBar
             progressBar.setVisibility(View.GONE);
-
-            // Меняем статус на "Готово"
             statusTextView.setText(R.string.status_ready);
-
-            // Включаем кнопку обратно
             fabAdd.setEnabled(true);
             fabAdd.setAlpha(1.0f);
         }
 
-        /**
-         * Выполняется в UI потоке если задача отменена
-         */
         @Override
         protected void onCancelled() {
             super.onCancelled();
-
-            // Скрываем ProgressBar
             progressBar.setVisibility(View.GONE);
-
-            // Статус "Отменено"
             statusTextView.setText(R.string.status_cancelled);
-
-            // Включаем кнопку обратно
             fabAdd.setEnabled(true);
             fabAdd.setAlpha(1.0f);
         }

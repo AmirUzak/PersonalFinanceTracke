@@ -17,4 +17,13 @@
     <string name="status_loading">Загрузка данных...</string>
     <string name="status_processing">Обработка...</string>
     <string name="status_cancelled">Отменено</string>
+
+    <!-- Welcome Activity -->
+    <string name="welcome_subtitle">Личный трекер финансов</string>
+    <string name="enter_your_name">Введите ваше имя</string>
+    <string name="select_currency">Выберите валюту</string>
+    <string name="continue_button">Продолжить</string>
+    <string name="error_empty_name">Пожалуйста, введите ваше имя</string>
+    <string name="welcome_user">Привет, %s!</string>
+    <string name="reset_settings">Сбросить настройки</string>
 </resources>

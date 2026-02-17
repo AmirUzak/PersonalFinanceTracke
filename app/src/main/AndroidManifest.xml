@@ -12,10 +12,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PersonalFinanceTracke">
 
+        <!-- WelcomeActivity - теперь стартовая -->
         <activity
-            android:name=".MainActivity"
+            android:name=".WelcomeActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.PersonalFinanceTracke">
 
             <intent-filter>
@@ -24,7 +24,15 @@
             </intent-filter>
 
         </activity>
-        
+
+        <!-- MainActivity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.PersonalFinanceTracke" />
+
+        <!-- AddOperationActivity -->
         <activity
             android:name=".AddOperationActivity"
             android:label="@string/add_transaction"

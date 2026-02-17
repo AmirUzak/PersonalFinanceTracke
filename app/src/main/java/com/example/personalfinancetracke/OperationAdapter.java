@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
+import androidx.core.content.ContextCompat;
 import java.util.List;
 
 public class OperationAdapter extends ArrayAdapter<Operation> {
@@ -35,9 +36,9 @@ public class OperationAdapter extends ArrayAdapter<Operation> {
         
         // Color coding
         if (operation.getType().equals("income")) {
-            amountTextView.setTextColor(getContext().getResources().getColor(android.R.color.holo_green_dark));
+            amountTextView.setTextColor(ContextCompat.getColor(getContext(), android.R.color.holo_green_dark));
         } else {
-            amountTextView.setTextColor(getContext().getResources().getColor(android.R.color.holo_red_dark));
+            amountTextView.setTextColor(ContextCompat.getColor(getContext(), android.R.color.holo_red_dark));
         }
         
         return convertView;

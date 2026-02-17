@@ -73,13 +73,17 @@ public class AddOperationActivity extends AppCompatActivity {
             return;
         }
         
-        double amount = Double.parseDouble(amountStr);
-        String type = (typeRadioGroup.getCheckedRadioButtonId() == R.id.radio_income) ? "income" : "expense";
-        String category = categorySpinner.getSelectedItem().toString();
-        
-        dbHelper.addOperation(type, amount, category);
-        
-        setResult(RESULT_OK);
-        finish();
+        try {
+            double amount = Double.parseDouble(amountStr);
+            String type = (typeRadioGroup.getCheckedRadioButtonId() == R.id.radio_income) ? "income" : "expense";
+            String category = categorySpinner.getSelectedItem().toString();
+            
+            dbHelper.addOperation(type, amount, category);
+            
+            setResult(RESULT_OK);
+            finish();
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, R.string.error_empty_amount, Toast.LENGTH_SHORT).show();
+        }
     }
 }
